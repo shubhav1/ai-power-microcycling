@@ -1,0 +1,8 @@
+torch
+numpy
+pandas
+scipy
+nvidia-ml-py
+tiktoken
+datasets
+matplotlib
