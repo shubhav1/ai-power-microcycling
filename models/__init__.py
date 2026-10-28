@@ -2,7 +2,7 @@ from .dense import GPT
 from .moe import MoE
 
 def build(model_type, vocab_size, block_size):
-    """ every model takes (idx, targets) and returns (logits, loss), ~124M active params """
+    """ every model takes (idx, targets) and returns (logits, loss), ~350M active params """
     if model_type == 'dense':
         return GPT(vocab_size, block_size)
     if model_type == 'moe':
@@ -26,3 +26,12 @@ def active_params(model):
             routed = m.w1.numel() + m.w2.numel()
             total -= routed - routed * m.top_k // m.n_exp
     return total
+
+def flops_per_token(model, block_size):
+    """ training flops per token, as in nanoGPT/PaLM: 6 per active matmul param (fwd + bwd) plus 12*C*T per
+    attention layer for the scores. mamba's scan isn't a matmul and isn't counted, so its mfu reads slightly low """
+    n = active_params(model)
+    if hasattr(model, 'pos_emb'):
+        n -= model.pos_emb.weight.numel() # a lookup, not a matmul
+    attn = [m for m in model.modules() if type(m).__name__ in ('CausalSelfAttention', 'MHA')]
+    return 6 * n + sum(12 * m.embed_dim * block_size for m in attn)

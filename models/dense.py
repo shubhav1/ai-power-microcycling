@@ -8,6 +8,7 @@ class CausalSelfAttention(nn.Module):
     def __init__(self, n_embd, n_head):
         super().__init__()
         self.n_head = n_head
+        self.embed_dim = n_embd # same name as mamba-ssm's attention, for flops_per_token
         self.qkv = nn.Linear(n_embd, 3 * n_embd)
         self.proj = nn.Linear(n_embd, n_embd)
 
@@ -48,9 +49,9 @@ class Block(nn.Module):
         return x
 
 class GPT(nn.Module):
-    """ gpt-2 small; ffwd(n_embd) builds each block's feedforward, the dense 4C mlp by default (moe.py swaps it) """
+    """ gpt-2 medium; ffwd(n_embd) builds each block's feedforward, the dense 4C mlp by default (moe.py swaps it) """
 
-    def __init__(self, vocab_size, block_size, n_layer=12, n_head=12, n_embd=768, ffwd=None, aux_weight=0.01):
+    def __init__(self, vocab_size, block_size, n_layer=24, n_head=16, n_embd=1024, ffwd=None, aux_weight=0.01):
         super().__init__()
         ffwd = ffwd or (lambda C: MLP(C, 4 * C))
         self.aux_weight = aux_weight
