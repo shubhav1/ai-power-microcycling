@@ -1,0 +1,7 @@
+runs/
+data/
+runs.log
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+.claude/
