@@ -45,3 +45,42 @@ python metrics.py  # -> runs/summary.csv
 ```
 
 **8. shut down the vm**
+
+
+## documenting my run
+
+calibration.py results:
+```
+root@dbcf7035f910:/workspace/ai_energy_usage# python calibration.py
+{'name': 'NVIDIA H100 80GB HBM3', 'uuid': 'GPU-463416d3-b00c-5a6e-8bb0-48351f854ce8', 'vbios': '96.00.DA.00.0C', 'driver': '595.91.07', 'tdp_w': 700.0, 'power_limit_w': 700.0, 'serial': '1652324103948'}
+10 ms done, last power 500 W
+20 ms done, last power 585 W
+50 ms done, last power 337 W
+100 ms done, last power 581 W
+130 ms done, last power 784 W
+200 ms done, last power 355 W
+500 ms done, last power 127 W
+1000 ms done, last power 127 W
+2000 ms done, last power 126 W
+ period_ms    true_hz  seen_hz  swing_w  attenuation
+        10 100.000000 2.197266 147.9780     0.237024
+        20  50.000000 0.488281 244.7320     0.392000
+        50  20.000000 0.061035 485.8038     0.778138
+       100  10.000000 0.061035 362.6210     0.580829
+       130   7.692308 2.319336 708.0280     1.134086
+       200   5.000000 5.004883 609.8670     0.976856
+       500   2.000000 2.014160 615.0480     0.985155
+      1000   1.000000 1.037598 652.9700     1.045897
+      2000   0.500000 0.488281 624.3160     1.000000
+nvml updates every ~100.0 ms -> set nyquit_hz = 5.0 in metrics.py
+```
+
+next, i ran some smoke tests to make sure everything was running right. fixed some bugs. used the dense baseline to determine the batch size that would keep it at ~85-90% of tdp.
+```
+root@dbcf7035f910:/workspace/ai_energy_usage# python train.py baseline 0
+baseline rep 0: dense, 354.9M params (354.9M active)
+step 0: loss 11.0850, 49,037 tok/s, mfu 12.0%, 771 W
+step 100: loss 7.6358, 139,871 tok/s, mfu 34.3%, 669 W
+```
+669 W is about 96% of TDP, so we are keeping batch_size at 16.
+

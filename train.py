@@ -19,7 +19,7 @@ batch_size = 16 # phase 0 raises this until steady power is >=85-90% of tdp
 block_size = 1024
 vocab_size = 50304 # gpt-2's 50257 padded to a multiple of 64
 learning_rate = 6e-4
-run_seconds = 360 # first ~1 min is warm up, wont be coutned in metrics
+run_seconds = 210 # first ~1 min is warm up, wont be coutned in metrics. 210 so 26 runs fit in ~1.8 hrs
 idle_seconds = 10 # idle before and after training, captures start/stop transients
 peak_flops = {'H100 PCIe': 756e12, 'H100 NVL': 835e12, 'H100': 989e12, 'A100': 312e12} # dense bf16 tensor core peak, for mfu
 

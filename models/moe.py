@@ -53,7 +53,9 @@ class MoE(nn.Module):
 
         # row of each (token, choice) in a buffer where expert e's group is padded up to a multiple of align.
         # the buffer has a static upper-bound size; the last expert's group absorbs the unused tail (all zeros)
-        padded = (counts + self.align - 1) // self.align * self.align
+        # every group gets at least align rows: an expert with 0 tokens would be an empty group, which hangs
+        # _grouped_mm's backward on torch 2.8. the extra rows are zeros so the math doesn't change
+        padded = ((counts + self.align - 1) // self.align * self.align).clamp(min=self.align)
         ends = padded.cumsum(0)
         rank = torch.arange(len(exp_i), device=x.device) - (counts.cumsum(0) - counts)[exp_i] # position within its expert
         dest = (ends - padded)[exp_i] + rank
