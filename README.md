@@ -1,14 +1,29 @@
-# ai training power microcycling (in progress!!)
+# analyzing ai training power microcycling for different model architectures
 
 **Question:** what shapes the training power waveform, and which decisions reduce grid-relevant swings at the lowest throughput/energy cost?
 
-**Rationale:** data centers are popping up pretty much everywhere nowadays, with big bets on ai infra. there's a lot of push for BTM energy, but most of these data centers 
-still rely on the grid for power. the problem with AI power demand is that it's very spike-y and requires huge influxes and drops, which a traditional grid is not built to
-handle. there are a lot of solutions in development to address this, with innovations for better supercapacitors or BESS systems to buffer microcycles.
+**Rationale:** data centers are popping up pretty much everywhere nowadays, with big bets on ai infra. there's a lot of push for BTM energy, but most of these data centers still rely on the grid for power. the problem with AI power demand is that it's very spike-y and requires huge influxes and drops, which a traditional grid is not built to handle. there are a lot of solutions in development to address this, with innovations for better supercapacitors or BESS systems to buffer microcycles.
 
-**Purpose:** as someone who's passionate about both infra and model architectures, i wanted to understand if there were also software/architectural decisions we could make 
-to mitigate microcycling and alleviate pressure on the grid + communities relying on those grids. the first step is to actually map different model decisions to their 
-respective energy usage patterns. this repository's purpose is to serve as an experiment that measures those differences exactly.
+**Purpose:** as someone who's passionate about both infra and model architectures, i wanted to understand if there were also software/architectural decisions we could make to mitigate microcycling and alleviate pressure on the grid + communities relying on those grids. the first step is to actually map different model decisions to their respective energy usage patterns. this repository's purpose is to serve as an experiment that measures those differences exactly.
+
+## results
+**a more thorough analysis of the results will be posted soon! for now, here's the high level summary of the results:**
+
+5 reps per architecture on one h100 sxm (700 W tdp), ~350M active params each, batch 16 x 1024 tokens. 210 s runs with the first 60 s cut as warm up, numbers are the mean across reps.
+
+| architecture | step time | mean power | swing (p95 - p5) | throughput | mfu | energy |
+|---|---|---|---|---|---|---|
+| dense (gpt-2 medium) | 117 ms | 690 W | 123 W (17.6% tdp) | 139.7k tok/s | 34.3% | 4.94 mJ/token |
+| coarse moe (8 experts, top-2) | 183 ms | 626 W | 156 W (22.3% tdp) | 89.5k tok/s | 22.0% | 7.00 mJ/token |
+| fine moe (64 experts, top-7 + 1 shared) | 310 ms | 587 W | 115 W (16.4% tdp) | 52.9k tok/s | 13.0% | 11.10 mJ/token |
+| mamba-2 | 226 ms | 552 W | 210 W (30.0% tdp) | 71.8k tok/s | 16.1% | 7.68 mJ/token |
+| hybrid (mamba-2 + attention every 8th layer) | 207 ms | 573 W | 208 W (29.7% tdp) | 78.2k tok/s | 17.4% | 7.33 mJ/token |
+
+dense was at the 700 W power cap for ~90% of training, so its swing is probably squashed by the cap.
+
+![gpu power across one average training step for each architecture](analysis/step_power.png)
+
+power across one average training step (thin lines are each rep, thick line is the mean). nvml only updates every ~100 ms, so readings from thousands of steps are lined up by how far into their step they were and averaged (`python analysis/plot_steps.py`).
 
 ## running it
 one h100 sxm vm (~4-5 gpu hrs), analysis on my mac. edit code on the mac and re-run the step 1 rsync.
@@ -83,4 +98,6 @@ step 0: loss 11.0850, 49,037 tok/s, mfu 12.0%, 771 W
 step 100: loss 7.6358, 139,871 tok/s, mfu 34.3%, 669 W
 ```
 669 W is about 96% of TDP, so we are keeping batch_size at 16.
+
+next up, i just ran sweep.py. all the terminal output and results were saved to a runs folder. the whole run took about 2 hours.
 

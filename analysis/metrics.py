@@ -51,6 +51,13 @@ def device_metrics(path):
 
     starts = step_starts(marks)
     kept_starts = starts[(starts >= t0) & (starts <= t1)]
+
+    # throughput + energy over the same window instead of meta's whole run (which includes step 0's compile)
+    s0, s1 = kept_starts.iloc[0], kept_starts.iloc[-1] # whole steps only, first kept step start to last
+    seconds = s1 - s0
+    tokens = (len(kept_starts) - 1) * meta['batch_size'] * meta['block_size']
+    tok_s = tokens / seconds
+    energy_j = p[(p.t >= s0) & (p.t <= s1)].power_w.mean() * seconds
     return {
         'run': os.path.basename(path), 'condition': meta['condition'], 'rep': meta['rep'],
         'gpu_uuid': meta['uuid'],
@@ -64,9 +71,9 @@ def device_metrics(path):
         'ramp_tdp_s': ramp / tdp, # %tdp/s maps straight onto pu/s at site scale
         'step_period_s': kept_starts.diff().median(),
         'dominant_hz': f[band][psd[band].argmax()],
-        'mj_per_token': meta['energy_j'] / meta['tokens'] * 1000,
-        'tok_s': meta['tokens'] / meta['train_seconds'],
-        'mfu': meta['mfu'],
+        'mj_per_token': energy_j / tokens * 1000,
+        'tok_s': tok_s,
+        'mfu': meta['mfu'] * tok_s / (meta['tokens'] / meta['train_seconds']), # mfu scales with tok/s, so rescale meta's
         'mean_temp_c': power[(power.t >= t0) & (power.t <= t1)].temp_c.mean(),
         'analyzed_s': t1 - t0,
     }
